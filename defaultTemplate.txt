@@ -1,0 +1,19 @@
+request-method:    {{request-method}}
+http-version:      {{http-version}}
+remote-host:       {{remote-host}}
+content-type:      {{content-type}}
+status:            {{status}}
+status-message:    {{status-message}}
+request-body-type: {{request-body-type}}
+response-headers:
+{{#response-headers}}
+  {{name}}: {{value}}
+{{/response-headers}}
+request-headers:
+{{#request-headers}}
+  {{name}}: {{value}}
+{{/request-headers}}
+query-parameters:
+{{#query-parameters}}
+  {{name}}: {{value}}
+{{/query-parameters}}
