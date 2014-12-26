@@ -41,6 +41,16 @@ muListTuple isKey isVal = MuList . map sub
                  | isVal n = return $ MuVariable v
                  | otherwise = return MuNothing
 
+reqBodyParams :: RequestBody -> [(S.ByteString, S.ByteString)]
+reqBodyParams (UrlEncoded  p _) = p
+reqBodyParams (Multipart _ p _) = p
+reqBodyParams _                 = []
+
+reqBodyFiles :: RequestBody -> [(S.ByteString, S.ByteString)]
+reqBodyFiles (UrlEncoded  _ fs) = map (\f -> (fileParameter f, fileName f)) fs
+reqBodyFiles (Multipart _ _ fs) = map (\f -> (fileParameter f, fileName f)) fs
+reqBodyFiles _                  = []
+
 main :: IO ()
 main = runHeroku run def $ do
     [capture|/mock/**|]
@@ -88,6 +98,9 @@ main = runHeroku run def $ do
             kReqBodyType      = [ "request-body-type", "requestBodyType"
                                 , "req-body-type", "reqBodyType"
                                 ]
+            kReqBody          = [ "request-body", "requestBody"
+                                , "req-body", "reqBody"
+                                ]
             kRequestMethod    = [ "request-method", "method", "meth" ]
             kHttpVersion      = [ "http-version", "version", "ver" ]
             kRemoteHost       = [ "remoteHost", "remote-host", "host" ]
@@ -116,12 +129,15 @@ main = runHeroku run def $ do
                              | k     <- kQueryParam
                              , (n,v) <- qParams
                              ]
-
                 , M.fromList $ map (, case reqBody of
                     Unknown       _ -> MuVariable ("unknown" :: S.ByteString)
                     UrlEncoded  _ _ -> MuVariable ("url-encoded" :: S.ByteString)
                     Multipart _ _ _ -> MuVariable ("multipart" :: S.ByteString)
                     ) kReqBodyType
+                , M.fromList [ (CI.mk $ T.concat [k, ".", T.decodeUtf8 n], MuVariable v)
+                             | k      <- kReqBody
+                             , (n, v) <- reqBodyParams reqBody ++ reqBodyFiles reqBody
+                             ]
                 , M.fromList $ map (,MuVariable $ Wai.requestMethod      rawRequest) kRequestMethod
                 , M.fromList $ map (,MuVariable . show $ Wai.httpVersion rawRequest) kHttpVersion
                 , M.fromList $ map (,MuVariable . show $ Wai.remoteHost  rawRequest) kRemoteHost
