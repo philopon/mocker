@@ -8,6 +8,7 @@
 import Control.Arrow
 import Control.Applicative
 import Control.Monad.Apiary.Action
+import Control.Concurrent
 import Web.Apiary
 import Web.Apiary.Heroku
 import qualified Network.Wai as Wai
@@ -59,7 +60,9 @@ main = runHeroku run def $ do
     . ([key|contentType|]   ?? "set content-type of response" =?!: ("text/plain" :: S.ByteString))
     . ([key|header|]        ?? "additional headers of response" =*: pByteString)
     . ([key|template|]      ?? "template of response body" =?!: defaultTemplate)
+    . ([key|delay|]         ?? "delay of response sending(sec)" =?: pInt)
     . action $ do
+        param [key|delay|] >>= maybe (return ()) (liftIO . threadDelay . (*(10^(6::Int))))
         (status', statusMessage') <- [params|status,statusMessage|]
         status $ Status status' statusMessage'
 
